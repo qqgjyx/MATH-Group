@@ -1,13 +1,15 @@
 import os
 import pydicom
 import numpy as np
+import torch
 from skimage.filters import gaussian
 from skimage.exposure import equalize_adapthist
 from .utils import time_to_seconds, intensity_to_concentration
 
 class DataLoader:
-    def __init__(self, folder_path):
+    def __init__(self, folder_path, device='cpu'):
         self.folder_path = folder_path
+        self.device = device
         self.image_data = []
         self.acquisition_times = []
         self.image_positions = []
@@ -49,18 +51,22 @@ class DataLoader:
         return self.shape
 
     def get_slice(self, z):
-        return self.image_data[z-1]  # z is 1-indexed, so we subtract 1
+        return torch.tensor(self.image_data[z-1], device=self.device)  # z is 1-indexed, so we subtract 1
 
     def get_concentration(self, x, y, z):
         slice_data = self.get_slice(z)
         intensities = slice_data[:, y, x]  # Note the order: [t, y, x]
         return intensity_to_concentration(intensities)
 
+    def get_concentration_slice(self, z):
+        slice_data = self.get_slice(z)
+        return intensity_to_concentration(slice_data)
+
     def get_time_points(self, z):
         x, y, total_z, t = self.shape
         start_idx = (z - 1) * t
         end_idx = z * t
         slice_times = self.acquisition_times[start_idx:end_idx]
-        return [t - slice_times[0] for t in slice_times]
+        return torch.tensor([t - slice_times[0] for t in slice_times], device=self.device)
 
     # Add more methods as needed

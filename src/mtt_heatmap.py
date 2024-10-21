@@ -19,7 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {device}")
 
 # Initialize the DataLoader with your DICOM folder path
-loader = DataLoader('SRS00013', device=device)
+loader = DataLoader('SRS00013')
 
 # Get the shape of the data
 x, y, z, t = loader.get_shape()
@@ -40,8 +40,8 @@ start_time = time.time()
 error_count = 0
 for z_idx in tqdm(range(start_slice, end_slice), desc="Processing slices"):
     # Get concentrations and time points for the entire slice
-    concentrations = loader.get_concentration_slice(z_idx + 1)
-    time_points = loader.get_time_points(z_idx + 1)
+    concentrations = torch.tensor(loader.get_concentration_slice(z_idx + 1), device=device)
+    time_points = torch.tensor(loader.get_time_points(z_idx + 1), device=device)
     
     # Reshape concentrations to (y*x, t)
     concentrations = concentrations.view(-1, t)
@@ -54,7 +54,7 @@ for z_idx in tqdm(range(start_slice, end_slice), desc="Processing slices"):
     except Exception as e:
         logger.warning(f"Error processing slice {z_idx}: {str(e)}")
         error_count += 1
-        mtt_map[z_idx] = torch.full((y, x), torch.nan, device=device)
+        mtt_map[z_idx] = torch.full((y, x), float('nan'), device=device)
 
 end_time = time.time()
 logger.info(f"Total processing time: {end_time - start_time:.2f} seconds")
